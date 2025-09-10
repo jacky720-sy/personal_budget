@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Budget Modelling Tool (Three‑Way) — v2</title>
+  <style>
+    :root{
+      --bg:#f5f7fb; 
+      --card:#ffffff; 
+      --muted:#5b6b7a; 
+      --text:#0f172a; 
+      --accent:#2563eb; 
+      --accent-2:#3b82f6; 
+      --line:#e5eaf2; 
+      --soft:#f0f6ff;
+      --bad:#b91c1c; 
+      --good:#15803d; 
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text)}
+    header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center;background:#fff;position:sticky;top:0;z-index:10;box-shadow:0 4px 20px rgba(15,23,42,0.04)}
+    header h1{font-size:20px;margin:0;color:var(--text)}
+    .container{max-width:1200px;margin:18px auto 32px;padding:0 16px}
+    .grid{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 30px rgba(15,23,42,.04)}
+    .card h2{margin:0;padding:14px 16px;font-size:16px;border-bottom:1px solid var(--line);color:#0b1b37}
+    .card .body{padding:14px 16px}
+    label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
+    input,select,button,textarea{width:100%;background:#fff;color:var(--text);border:1px solid #d7deea;border-radius:10px;padding:10px;font-size:14px;box-shadow:inset 0 1px 0 rgba(2,6,23,0.02)}
+    input:focus,select:focus,textarea:focus{outline:3px solid rgba(37,99,235,.15);border-color:var(--accent)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border-radius:999px;background:var(--soft);border:1px solid #d2e3ff;font-size:12px;color:#0b1b37}
+    .btn{cursor:pointer;background:#fff;border:1px solid #c9d6ef;transition:all .15s ease}
+    .btn-primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;border:none}
+    .btn-ghost{background:transparent;border:1px dashed #c9d6ef}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th,td{border-bottom:1px solid var(--line);padding:10px 8px;text-align:right;white-space:nowrap}
+    th:first-child,td:first-child{text-align:left}
+    thead th{position:sticky;top:0;background:var(--soft);z-index:1;color:#0b1b37}
+    tfoot th{background:#fafcff;position:sticky;bottom:0}
+    .scroll{overflow:auto;max-height:420px;border-radius:0 0 14px 14px}
+    .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .kpi .item{padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+    .kpi .item h3{margin:0 0 6px;font-size:12px;color:var(--muted)}
+    .kpi .item .val{font-size:20px;font-weight:700;color:#0b1b37}
+    .subtle{font-size:11px;color:#64748b}
+    canvas{width:100%;height:160px;background:#fff;border:1px solid var(--line);border-radius:10px}
+    @media (max-width: 980px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1> Personal Budget Modelling Tool (Three‑Way)</h1>
+    <span class="pill"> Monthly Budget</span>
+  </header>
+
+  <div class="container grid">
+    <div class="card">
+      <h2>Setup</h2>
+      <div class="body">
+        <div class="row">
+          <div>
+            <label>Start Date (YYYY‑MM)</label>
+            <input id="startmonth" type="month" lang="en-GB">
+          </div>
+          <div>
+            <label>Horizon (months)</label>
+            <input id="months" type="number" min="1" max="60">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Opening Cash </label>
+            <input id="openingcash" type="number" step="100">
+          </div>
+          <div>
+            <label>Opening Credit Card Balance</label>
+            <input id="occb" type="number" step="100">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Opening Loan Principal</label>
+            <input id="loanopen" type="number" step="100">
+          </div>
+          <div>
+            <label>Currency</label>
+            <select id="ccy">
+              <option value="AUD">AUD</option>
+              <option value="USD">USD</option>
+              <option value="CNY">CNY</option>
+            </select>
+          </div>
+        </div>
+        <div style="padding-top:6px">
+          <button class="btn-primary" id="runBtn">Compute & Update</button>
+          <button class="btn btn-ghost" id="loadDemo">Load Demo</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Income Settings</h2>
+      <div class="body">
+        <div class="row">
+          <div>
+            <label>Salary (gross, monthly)</label>
+            <input id="salarygross" type="number" step="100">
+          </div>
+          <div>
+            <label>Income tax rate (simple, %)</label>
+            <input id="Incometaxrtae" type="number" step="100">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Other income (avg monthly)</label>
+            <input id="otherIncome" type="number"step="100">
+          </div>
+          <div>
+            <label>Raise starts in which month (0 = none)</label>
+            <input id="raiseMonth" type="number" min="0">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Raise (%)</label>
+            <input id="raisePct" type="number" step="1">
+          </div>
+          <div>
+            <label>Pay frequency</label>
+            <select id="payfreq">
+              <option value="monthly">monthly</option>
+              <option value="biweekly">biweekly</option>
+            </select>
+          </div>
+        </div>
+        <div id="biweeklyRow" class="row" style="display:none">
+          <div>
+            <label>First payday</label>
+            <input id="firstPayDate" type="date">
+          </div>
+          <div class="subtle">If biweekly payroll is selected, cash inflow is recorded in the month the payday lands.</div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Investment income (avg monthly)</label>
+            <input id="investIncome" type="number" step="100">
+          </div>
+          <div>
+            <label>Reinvest investment income?</label>
+            <select id="reinvest">
+              <option value="yes">Yes (add to investment balance)</option>
+              <option value="no">No (cash in this month)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Expense Settings</h2>
+      <div class="body">
+        <div class="row">
+          <div>
+            <label>Fixed expenses (monthly) — Rent / Mortgage</label>
+            <input id="rent" type="number" step="100">
+          </div>
+          <div>
+            <label>Fixed expenses (monthly) — Subscriptions / Phone / Internet</label>
+            <input id="subs" type="number" step="100">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Variable expenses (monthly) — Food / Transport / Entertainment</label>
+            <input id="variable" type="number" step="100">
+          </div>
+          <div>
+            <label>Use credit card for spending?</label>
+            <select id="useCard">
+              <option value="yes">Yes (charge now, pay next month)</option>
+              <option value="no">No (pay cash this month)</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Big purchases (spread monthly)</label>
+            <input id="BP" type="number" step="1000">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Credit Card & Loan</h2>
+      <div class="body">
+        <div class="row">
+          <div>
+            <label>Statement day (day of month)</label>
+            <input id="ccStatementDay" type="number" min="1" max="28">
+          </div>
+          <div>
+            <label>Payment day (next month)</label>
+            <input id="ccPaymentDay" type="number" min="1" max="28">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Repayment strategy</label>
+            <select id="ccStrategy">
+              <option value="full">Pay in full</option>
+              <option value="min">Minimum payment (3%)</option>
+            </select>
+          </div>
+          <div>
+            <label>Credit card APR (%)</label>
+            <input id="ccAPR" type="number"  step="0.1">
+          </div>
+        </div>
+        <hr style="border-color:var(--line); margin:12px 0">
+        <div class="row">
+          <div>
+            <label>Loan APR (%)</label>
+            <input id="loanAPR" type="number" step="0.1">
+          </div>
+          <div>
+            <label>Loan term (months)</label>
+            <input id="loanTerm" type="number" min="0">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="grid-column:1 / -1">
+      <h2>Dashboard (KPIs & Trends)</h2>
+      <div class="body">
+        <div class="kpi" id="kpi"></div>
+        <div style="margin-top:10px" class="row">
+          <div>
+            <canvas id="chartCash"></canvas>
+            <div class="subtle">Ending cash trend</div>
+          </div>
+          <div>
+            <canvas id="chartNW"></canvas>
+            <div class="subtle">Net worth trend</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="grid-column:1 / -1">
+      <h2>Profit & Loss (P&L)</h2>
+      <div class="scroll"><table id="tblPL"></table></div>
+    </div>
+
+    <div class="card" style="grid-column:1 / -1">
+      <h2>Cash Flow</h2>
+      <div class="scroll"><table id="tblCF"></table></div>
+    </div>
+
+    <div class="card" style="grid-column:1 / -1">
+      <h2>Balance Sheet</h2>
+      <div class="scroll"><table id="tblBS"></table></div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  // localStorage helpers
+  function saveState(){
+    const ids = ['startmonth','months','openingcash','occb','loanopen','ccy','salarygross','Incometaxrtae','otherIncome','raiseMonth','raisePct','payfreq','firstPayDate','investIncome','reinvest','rent','subs','variable','useCard','BP','ccStatementDay','ccPaymentDay','ccStrategy','ccAPR','loanAPR','loanTerm'];
+    const obj={}; ids.forEach(id=>{const el=document.getElementById(id); if(el) obj[id]=el.value;});
+    localStorage.setItem('pb_v2_state', JSON.stringify(obj));
+  }
+  function loadState(){
+    try{ const s=localStorage.getItem('pb_v2_state'); if(!s) return; const obj=JSON.parse(s); for(const k in obj){ const el=document.getElementById(k); if(el){ el.value=obj[k]; }} }catch(e){}
+  }
+
+// Utility functions
+  const $ = (id)=>document.getElementById(id);
+  const r2 = (x)=> Math.round((+x||0)*100)/100;
+  const fmt = (n, ccy) => (isNaN(n)?0:n).toLocaleString(undefined,{style:'currency', currency: ccy});
+  const limit = (v,min,max)=>Math.max(min,Math.min(max,v));
+  const monthsBetween=(start, n)=>{const d = new Date(start.getFullYear(), start.getMonth(), 1); const arr=[];for(let i=0;i<n;i++){arr.push(new Date(d.getFullYear(), d.getMonth()+i, 1));}return arr};
+  const yyyymm = (d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+
+  // Simple line chart
+function drawLine(canvas, series, labels){
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width = canvas.clientWidth; 
+  const h = canvas.height = canvas.clientHeight;
+
+  ctx.clearRect(0,0,w,h);
+  if(!series || series.length===0) return;
+
+  const min = Math.min(...series);
+  const max = Math.max(...series);
+  const left = 44, right = 10, top = 8, bottom = 22;
+  const W = w-left-right, H = h-top-bottom;
+
+  const same = (max === min);
+  // scaleY: value to pixel
+  const scaleY = same 
+    ? () => H/2 
+    : (v)=> H - ((v - min) / (max - min)) * H;
+
+  const scaleX = (i)=> left + (i * (W/Math.max(1, series.length-1)));
+
+  ctx.strokeStyle = '#e5eaf2'; 
+  ctx.lineWidth = 1;
+  for(let g=0; g<=4; g++){
+    const y = top + g*(H/4);
+    ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(left+W, y); ctx.stroke();
+  }
+
+  // Y-axis labels
+  ctx.fillStyle = '#64748b'; 
+  ctx.font = '11px system-ui';
+  ctx.textBaseline = 'middle';
+  const ticks = same ? [min] : [min, (min+max)/2, max];
+  ticks.forEach((t)=>{
+    const y = top + scaleY(t);
+    const txt = (Math.round(t*100)/100).toLocaleString();
+    ctx.fillText(txt, 6, y);
+  });
+
+  // line
+  ctx.strokeStyle = '#2563eb'; 
+  ctx.lineWidth = 2; 
+  ctx.beginPath();
+  series.forEach((v,i)=>{
+    const x=scaleX(i), y=top+scaleY(v);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // points
+  ctx.fillStyle = '#1e40af';
+  series.forEach((v,i)=>{
+    const x=scaleX(i), y=top+scaleY(v);
+    ctx.beginPath(); ctx.arc(x,y,2.5,0,Math.PI*2); ctx.fill();
+  });
+
+  // X-axis label
+  ctx.fillStyle = '#64748b';
+  ctx.textBaseline = 'alphabetic';
+  const L = Array.isArray(labels) ? labels.length : 0;
+  const step = L ? (Math.ceil(L/6) || 1) : 1;
+  if (L){
+    for(let i=0;i<L;i+=step){
+      ctx.fillText(labels[i], scaleX(i)-10, h-6);
+    }
+  }
+}
+
+// Main compute function
+  function compute(){
+    const ccy = $('ccy').value;
+    const startVal = $('startmonth').value; const monthsNum = parseInt($('months').value||12);
+    if(!startVal){ alert('Please select a start month'); return; }
+    const start = new Date(startVal+'-01T00:00:00');
+    const periods = monthsBetween(start, monthsNum);
+
+    // Income
+    const baseGross = Number($('salarygross').value||0);
+    const taxRate = Number($('Incometaxrtae').value||0)/100;
+    const otherIncome = Number($('otherIncome').value||0);
+    const raiseMonth = parseInt($('raiseMonth').value||0);
+    const raisePct = Number($('raisePct').value||0)/100;
+    const payfreq = $('payfreq').value;
+    const firstPayDate = $('firstPayDate').value? new Date($('firstPayDate').value+'T00:00:00') : null;
+    if (payfreq==='biweekly' && !firstPayDate) { alert('Please select First payday for biweekly payroll'); return; }
+    const investIncome = Number($('investIncome').value||0);
+    const reinvest = (document.getElementById('reinvest')?.value||'yes')==='yes';
+
+    // Expenses
+    const rent = Number($('rent').value||0);
+    const subs = Number($('subs').value||0);
+    const variable = Number($('variable').value||0);
+    const useCard = $('useCard').value === 'yes';
+    // Big purchases spread monthly
+    const BPTotal = Number($('BP').value||0);
+    const monthlyBP = monthsNum>0 ? BPTotal / monthsNum : 0;
+
+    // Card & Loan
+    const ccStatementDay = limit(parseInt($('ccStatementDay').value||25),1,28);
+    const ccPaymentDay = limit(parseInt($('ccPaymentDay').value||15),1,28);
+    const ccStrategy = $('ccStrategy').value;
+    const ccAPR = Number($('ccAPR').value||0)/100; const ccMonthlyRate = ccAPR/12;
+
+    const loanAPR = Number($('loanAPR').value||0)/100; const loanMonthlyRate = loanAPR/12;
+    const loanTerm = parseInt($('loanTerm').value||0);
+
+    // Openings
+    let cash = Number($('openingcash').value||0);
+    let ccBal = Number($('occb').value||0);
+    let loanPrin = Number($('loanopen').value||0);
+
+    // Derived loan payment
+    let loanPMT = 0;
+    if(loanPrin>0 && loanTerm>0){
+      loanPMT = loanMonthlyRate>0 ? (loanPrin*loanMonthlyRate)/(1-Math.pow(1+loanMonthlyRate,-loanTerm)) : (loanPrin/loanTerm);
+    }
+
+    const outPL = [], outCF = [], outBS = [];
+    let investBal = 0;
+    function genBiweeklyPays(){
+      if(payfreq!=='biweekly' || !firstPayDate) return null;
+      const pays=[]; const end = new Date(periods[periods.length-1]); end.setMonth(end.getMonth()+1);
+      for(let d=new Date(firstPayDate); d<=end; d=new Date(d.getFullYear(), d.getMonth(), d.getDate()+14)){ pays.push(new Date(d)); }
+      return pays;
+    }
+    const biweeklyPays = genBiweeklyPays();
+    let ccDue0 = 0, ccDue1 = 0, ccDue2 = 0;
+    // include opening CC balance as first due
+    ccDue0 += Math.max(0, Number($('occb').value||0));
+
+    const labels=[]; const chartCash=[]; const chartNW=[];
+
+    for(let i=0;i<periods.length;i++){
+      const label = yyyymm(periods[i]); labels.push(label);
+
+      // salary
+      const thisGross = baseGross * ((raiseMonth>0 && i+1>=raiseMonth) ? (1+raisePct) : 1);
+      const monthlyGross = thisGross; 
+      const monthlyTax = monthlyGross*taxRate;
+      const monthlyNet = monthlyGross - monthlyTax;
+      // salary cash-in
+      let salaryCashIn = 0;
+      if(payfreq==='monthly'){ salaryCashIn = monthlyNet; }
+      else {
+        const perPayNet = monthlyNet * 12 / 26;
+        if(biweeklyPays){
+          biweeklyPays.forEach(pd=>{
+            if(pd.getFullYear()===periods[i].getFullYear() && pd.getMonth()===periods[i].getMonth()){
+              salaryCashIn += perPayNet;
+            }
+          });
+        }
+      }
+
+      const otherIn = otherIncome;
+      const investIn = investIncome;
+
+      // expenses
+      const fixedExp = rent + subs;
+      const varExp = variable + monthlyBP;
+      const bigPurchaseThis = monthlyBP;
+
+      // loan
+      const loanInterest = loanPrin>0 ? loanPrin*loanMonthlyRate : 0;
+      let loanPrincipalRepay = 0; let loanCashOut = 0;
+      if(loanPrin>0 && loanTerm>0){
+        const thisPMT = Math.min(loanPMT, loanPrin + loanInterest);
+        loanPrincipalRepay = Math.max(0, thisPMT - loanInterest);
+        loanPrin = Math.max(0, loanPrin - loanPrincipalRepay);
+        loanCashOut = thisPMT;
+      }
+
+      // credit card — purchases this month
+      const baseExpense = fixedExp + varExp + bigPurchaseThis;
+      let purchasesOnCard = 0; let cashPaidNow_Op = 0;
+      if (useCard) { purchasesOnCard = baseExpense; }
+      else { cashPaidNow_Op = baseExpense; }
+
+      // card interest and payment
+      let ccInterest = 0; let ccRepayCash = 0;
+      if (ccStrategy==='full') { ccRepayCash = ccDue0; ccInterest = 0; }
+      else {
+        const ccySel = $('ccy').value;
+        const floorMap = { AUD: 30, USD: 25, CNY: 10 };
+        const minFloor = floorMap[ccySel] ?? 20;
+        const minDue = Math.max(ccDue0 * 0.03, minFloor);
+        ccRepayCash = Math.min(minDue, ccDue0);
+        const revolve = ccDue0 - ccRepayCash;
+        ccInterest = revolve * ccMonthlyRate;
+      }
+      ccBal = Math.max(0, ccBal + purchasesOnCard + ccInterest - ccRepayCash);
+
+      // Allocate purchase
+      const days = new Date(periods[i].getFullYear(), periods[i].getMonth()+1, 0).getDate();
+      const f = limit(ccStatementDay,1,28) / days; 
+      const preStmt = purchasesOnCard * f; 
+      const postStmt = purchasesOnCard - preStmt; 
+      ccDue1 += preStmt;
+      ccDue2 += postStmt;
+      ccDue0 = ccDue1; ccDue1 = ccDue2; ccDue2 = 0;
+
+      // Cash Flow
+      const cashInOp = salaryCashIn + otherIn + (reinvest ? 0 : investIn);
+      if(reinvest){ investBal += investIn; }
+      const cashOutOp = cashPaidNow_Op + ccRepayCash;
+      const cashInInv = 0; const cashOutInv = 0;
+      const cashInFin = 0; const cashOutFin = loanCashOut;
+
+      const netCash = r2(cashInOp - cashOutOp - cashOutInv - cashOutFin + cashInInv + cashInFin);
+      const cashBegin = cash; cash = r2(cash + netCash); const cashEnd = cash;
+
+      // P&L
+      const depThis = 0;
+      const interestExp = loanInterest + ccInterest;
+      const netIncome = (monthlyNet + otherIn + investIn) - (fixedExp + varExp) - depThis - interestExp;
+
+      // BS
+      const assetsCash = cashEnd;
+      const assetsPPE = 0;
+      const assetsInvest = investBal;
+      const liabilitiesLoan = loanPrin;
+      const liabilitiesCC = ccBal;
+      const netWorth = assetsCash + assetsPPE + assetsInvest - liabilitiesLoan - liabilitiesCC;
+
+      outPL.push({label, salaryNet: monthlyNet, otherIn, investIncome: investIn, fixedExp, varExp, BPExp: 0, dep: depThis, interest: interestExp, netIncome});
+      outCF.push({label, cashInOp, cashOutOp, cashOutInv, cashOutFin, netCash, cashEnd});
+      outBS.push({label, cash:assetsCash, ppe:assetsPPE, invest:assetsInvest, loan:liabilitiesLoan, cc:liabilitiesCC, netWorth});
+
+      chartCash.push(cashEnd); chartNW.push(netWorth);
+    }
+
+    // KPI
+    const kpi = $('kpi');
+    const last = outBS[outBS.length-1]; const first = outBS[0];
+    const cfSum = outCF.reduce((s,r)=>s+r.netCash,0);
+    const plSum = outPL.reduce((s,r)=>s+r.netIncome,0);
+    let minCash = Infinity, minIdx = -1;
+    outCF.forEach((r, idx)=>{ if (r.cashEnd < minCash){ minCash = r.cashEnd; minIdx = idx; }});
+    const warnTile = (minCash < 0)
+      ? `<div class="item"><h3>⚠️ Cash Warning</h3><div class="val" style="color:var(--bad)">${fmt(minCash,ccy)}</div><div class="subtle">First negative in ${outCF[minIdx].label}</div></div>`
+      : '';
+    kpi.innerHTML = `
+      <div class="item"><h3>Ending Cash</h3><div class="val">${fmt(last.cash,ccy)}</div><div class="subtle">Start: ${fmt(Number($('openingcash').value||0),ccy)}</div></div>
+      <div class="item"><h3>Ending Net Worth</h3><div class="val">${fmt(last.netWorth,ccy)}</div><div class="subtle">Change: ${fmt(last.netWorth-first.netWorth,ccy)}</div></div>
+      <div class="item"><h3>Cumulative Net Cash Flow</h3><div class="val" style="color:${cfSum>=0?'var(--good)':'var(--bad)'}">${fmt(cfSum,ccy)}</div><div class="subtle">${outCF.length}-month total</div></div>
+      <div class="item"><h3>Cumulative Net Income</h3><div class="val" style="color:${plSum>=0?'var(--good)':'var(--bad)'}">${fmt(plSum,ccy)}</div><div class="subtle">Includes interest</div></div>
+      ${warnTile}
+    `;
+
+    // tables 
+    function renderTable(el, columns, rows, totals){
+      const thead = `<thead><tr>${columns.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead>`;
+      const tbody = `<tbody>${rows.map(r=>`<tr>${columns.map(c=>`<td>${c.format?c.format(r[c.key]):r[c.key]}</td>`).join('')}</tr>`).join('')}</tbody>`;
+      const tfoot = totals? `<tfoot><tr>${columns.map(c=>`<th>${totals[c.key]!==undefined?(c.format?c.format(totals[c.key]):totals[c.key]):''}</th>`).join('')}</tr></tfoot>`:'';
+      el.innerHTML = thead+tbody+tfoot;
+    }
+
+    renderTable(
+      $('tblPL'),
+      [
+        {key:'label', label:'Month', format:(v)=>v},
+        {key:'salaryNet', label:'Salary (net)', format:(v)=>fmt(v,ccy)},
+        {key:'otherIn', label:'Other income', format:(v)=>fmt(v,ccy)},
+        {key:'investIncome', label:'Investment income', format:(v)=>fmt(v,ccy)},
+        {key:'fixedExp', label:'Fixed expenses', format:(v)=>fmt(-v,ccy)},
+        {key:'varExp', label:'Variable expenses', format:(v)=>fmt(-v,ccy)},
+        {key:'interest', label:'Interest expense', format:(v)=>fmt(-v,ccy)},
+        {key:'netIncome', label:'Net income', format:(v)=>`<b style="color:${v>=0?'var(--good)':'var(--bad)'}">${fmt(v,ccy)}</b>`},
+      ],
+      outPL,
+      outPL.reduce((acc,r)=>{Object.keys(r).forEach(k=>{ if(k!=='label') acc[k]=(acc[k]||0)+r[k]; }); return acc;}, {label:'Total'})
+    );
+
+    renderTable(
+      $('tblCF'),
+      [
+        {key:'label', label:'Month', format:(v)=>v},
+        {key:'cashInOp', label:'Operating cash in', format:(v)=>fmt(v,ccy)},
+        {key:'cashOutOp', label:'Operating cash out', format:(v)=>fmt(-v,ccy)},
+        {key:'cashOutInv', label:'Investing cash out', format:(v)=>fmt(-v,ccy)},
+        {key:'cashOutFin', label:'Financing cash out', format:(v)=>fmt(-v,ccy)},
+        {key:'netCash', label:'Net cash (period)', format:(v)=>`<b style="color:${v>=0?'var(--good)':'var(--bad)'}">${fmt(v,ccy)}</b>`},
+        {key:'cashEnd', label:'Ending cash', format:(v)=>fmt(v,ccy)},
+      ],
+      outCF,
+      outCF.reduce((acc,r)=>{ ['cashInOp','cashOutOp','cashOutInv','cashOutFin','netCash'].forEach(k=>acc[k]=(acc[k]||0)+r[k]); acc['label']='Total'; return acc; }, {label:'Total'})
+    );
+
+    renderTable(
+      $('tblBS'),
+      [
+        {key:'label', label:'Month', format:(v)=>v},
+        {key:'cash', label:'Cash', format:(v)=>fmt(v,ccy)},
+        {key:'invest', label:'Investments', format:(v)=>fmt(v,ccy)},
+        {key:'loan', label:'Loan principal', format:(v)=>fmt(-v,ccy)},
+        {key:'cc', label:'Credit card balance', format:(v)=>fmt(-v,ccy)},
+        {key:'netWorth', label:'Net worth', format:(v)=>`<b>${fmt(v,ccy)}</b>`},
+      ],
+      outBS
+    );
+
+    drawLine($('chartCash'), outCF.map(r=>r.cashEnd), labels);
+    drawLine($('chartNW'), outBS.map(r=>r.netWorth), labels);
+  }
+
+  $('payfreq').addEventListener('change', ()=>{
+    $('biweeklyRow').style.display = $('payfreq').value==='biweekly' ? '' : 'none';
+  });
+  $('runBtn').addEventListener('click', ()=>{compute(); saveState();});
+
+  // demo part
+  $('loadDemo').addEventListener('click', ()=>{
+    const today = new Date(); const ym = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+    $('startmonth').value = ym;
+    $('months').value = 12;
+    $('openingcash').value = 5000;
+    $('occb').value = 200;
+    $('loanopen').value = 5000;
+    $('loanAPR').value = 6;
+    $('loanTerm').value = 36;
+
+    $('salarygross').value = 6500;
+    $('Incometaxrtae').value = 22;
+    $('otherIncome').value = 150;
+    $('investIncome').value = 120;
+    $('raiseMonth').value = 6;
+    $('raisePct').value = 5;
+    $('payfreq').value = 'biweekly';
+    $('biweeklyRow').style.display = '';
+    const fpd = new Date(today.getFullYear(), today.getMonth(), 7);
+    $('firstPayDate').value = `${fpd.getFullYear()}-${String(fpd.getMonth()+1).padStart(2,'0')}-${String(fpd.getDate()).padStart(2,'0')}`;
+
+    $('rent').value = 2300;
+    $('subs').value = 300;
+    $('variable').value = 1300;
+    $('useCard').value = 'yes';
+
+    $('BP').value = 2400;
+
+    $('ccStatementDay').value = 25; $('ccPaymentDay').value = 15; $('ccStrategy').value='full'; $('ccAPR').value=18;
+
+    compute();
+  });
+  // auto save on change
+  ['startmonth','months','openingcash','occb','loanopen','ccy','salarygross','Incometaxrtae','otherIncome','raiseMonth','raisePct','payfreq','firstPayDate','investIncome','reinvest','rent','subs','variable','useCard','BP','ccStatementDay','ccPaymentDay','ccStrategy','ccAPR','loanAPR','loanTerm'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('change', saveState); }});
+  // load state
+  loadState();
+})();
+</script>
+</body>
+</html>
